@@ -231,10 +231,17 @@ const TitleCard: React.FC<{ duration: number; lines: W[][]; size?: number }> = (
 
 const Deal: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
+  // Both cards stay mounted for the whole shot. The handoff is one linear
+  // clock, local frames 24–96 (2.4s, absolute 11.53–13.93s), so a 12s sample
+  // and a 13s sample are both mid-travel. The front card leaves the shared
+  // anchor while the second card moves onto that same anchor. The front card
+  // stays fully opaque until most of the travel is done.
   const aIn = rise(frame, 0, 16);
   const bIn = rise(frame, 8, 16);
-  const hand = interpolate(frame, [46, 78], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
-  const aFade = hand <= 0.4 ? 1 : 1 - (hand - 0.4) / 0.6;
+  const hand = interpolate(frame, [24, 96], [0, 1], clamp);
+  const aFade = hand <= 0.78 ? 1 : 1 - (hand - 0.78) / 0.22;
+  const anchorY = 180;
+  const stackY = 560;
   const card = (title: string, opacity: number, x: number, y: number, depth: number, rot = 0) => (
     <div
       style={{
@@ -251,6 +258,7 @@ const Deal: React.FC<{ duration: number }> = ({ duration }) => {
         padding: '0 56px',
         opacity,
         transform: `rotate(${rot}deg)`,
+        transformOrigin: '50% 50%',
       }}
     >
       <div style={{ width: 20, alignSelf: 'stretch', background: AMBER, borderRadius: 8, margin: '36px 0', marginRight: 36 }} />
@@ -262,17 +270,17 @@ const Deal: React.FC<{ duration: number }> = ({ duration }) => {
       {card(
         'Sensor drift early-warning',
         bIn,
-        (1 - bIn) * 80,
-        560 - hand * 380,
-        hand,
+        (1 - bIn) * 140 + bIn * 56 * (1 - hand),
+        (1 - bIn) * (stackY + 90) + bIn * (stackY + (anchorY - stackY) * hand),
+        0.35 + hand * 0.65,
       )}
       {card(
         'Self-healing CI triage router',
         aIn * aFade,
-        (1 - aIn) * 240 - hand * 520,
-        160 - hand * 160,
-        1 - hand,
-        -hand * 8,
+        (1 - aIn) * 260 - hand * 720,
+        anchorY - hand * 36,
+        1 - hand * 0.45,
+        -hand * 12,
       )}
     </PaperStage>
   );
