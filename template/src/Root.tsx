@@ -1,6 +1,7 @@
 import { Composition } from 'remotion';
 import { AIFL_TOTAL } from './aifl/Main';
 import { MOBILE_TOTAL, MobilePromo } from './mobile/MobilePromo';
+import { DingFengBo, POEM_TOTAL } from './poem/DingFengBo';
 import { ThemedFilm } from './themes/ThemedFilm';
 
 export const Root: React.FC = () => {
@@ -19,6 +20,14 @@ export const Root: React.FC = () => {
         id="AiflPromoMobile"
         component={MobilePromo}
         durationInFrames={MOBILE_TOTAL}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="DingFengBo"
+        component={DingFengBo}
+        durationInFrames={POEM_TOTAL}
         fps={30}
         width={1920}
         height={1080}
