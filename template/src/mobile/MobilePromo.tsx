@@ -118,19 +118,26 @@ const Rule: React.FC<{ frame: number; start: number; width?: number }> = ({ fram
 
 const InkOpen: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
-  const kicker = rise(frame, 30, 14);
+  const kicker = rise(frame, 34, 14);
+  const vDraw = interpolate(frame, [0, 14], [100, 0], clamp);
+  const hDraw = interpolate(frame, [8, 22], [100, 0], clamp);
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: '0 120px' }}>
+        <svg width={88} height={88} viewBox="0 0 64 64" style={{ display: 'block', marginBottom: 28 }}>
+          <line x1={32} y1={2} x2={32} y2={62} stroke={AMBER} strokeWidth={6} strokeLinecap="round" pathLength={100} strokeDasharray={100} strokeDashoffset={vDraw} />
+          <line x1={2} y1={32} x2={62} y2={32} stroke={AMBER} strokeWidth={6} strokeLinecap="round" pathLength={100} strokeDasharray={100} strokeDashoffset={hDraw} />
+        </svg>
         <Words
           frame={frame}
-          size={128}
+          size={120}
+          delay={12}
           lines={[[{ t: 'AI' }, { t: 'Foundation' }, { t: 'Lab' }]]}
         />
-        <Rule frame={frame} start={22} />
+        <Rule frame={frame} start={28} />
         <div
           style={{
-            marginTop: 36,
+            marginTop: 32,
             fontFamily: SANS,
             fontSize: 68,
             letterSpacing: '0.08em',
@@ -148,42 +155,62 @@ const InkOpen: React.FC<{ duration: number }> = ({ duration }) => {
 
 const Hero: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
-  const t = rise(frame, 0, 18);
-  const note = rise(frame, 16, 14);
+  const enter = rise(frame, 0, 16);
+  const lift = rise(frame, 22, 16);
+  const reseat = rise(frame, 84, 16);
+  const hover = lift * (1 - reseat);
+  const note = rise(frame, 34, 12);
+  const beam = interpolate(frame, [30, 82], [140, -980], clamp);
+  const y = (1 - enter) * 90 - hover * 42;
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', padding: '0 120px' }}>
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div
           style={{
             width: 1560,
-            background: CARD,
-            borderRadius: 36,
-            boxShadow: '0 28px 70px rgba(19,17,15,0.14)',
-            display: 'flex',
-            overflow: 'hidden',
-            opacity: t,
-            transform: `translateY(${(1 - t) * 80}px) scale(${0.96 + 0.04 * t})`,
+            height: 460,
+            position: 'relative',
+            opacity: enter,
+            transform: `translateY(${y}px)`,
+            filter: `drop-shadow(0 ${22 + hover * 28}px ${40 + hover * 24}px rgba(19,17,15,${0.12 + hover * 0.12}))`,
           }}
         >
-          <div style={{ width: 28, background: AMBER, flex: 'none' }} />
-          <div style={{ padding: '72px 72px 64px' }}>
-            <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 84, color: INK, lineHeight: 1.08 }}>
-              Confidence-routed model cascade
-            </div>
-            <div
-              style={{
-                marginTop: 28,
-                fontFamily: SERIF,
-                fontWeight: 600,
-                fontSize: 72,
-                lineHeight: 1.12,
-                opacity: note,
-              }}
-            >
-              <span style={{ color: INK }}>One card, </span>
-              <span style={{ color: AMBER, fontStyle: 'italic' }}>one project.</span>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: CARD,
+              borderRadius: 36,
+              display: 'flex',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ width: 22, background: AMBER, flex: 'none' }} />
+            <div style={{ padding: '64px 64px 56px' }}>
+              <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 80, color: INK, lineHeight: 1.08 }}>
+                Confidence-routed model cascade
+              </div>
+              <div style={{ marginTop: 28, fontFamily: SERIF, fontWeight: 600, fontSize: 68, lineHeight: 1.12, opacity: note }}>
+                <span style={{ color: INK }}>One card, </span>
+                <span style={{ color: AMBER, fontStyle: 'italic' }}>one project.</span>
+              </div>
             </div>
           </div>
+          <svg width={1560} height={460} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <rect
+              x={10}
+              y={10}
+              width={1540}
+              height={440}
+              rx={32}
+              fill="none"
+              stroke={AMBER}
+              strokeWidth={14}
+              strokeDasharray="780 2200"
+              strokeDashoffset={beam}
+              opacity={hover}
+            />
+          </svg>
         </div>
       </AbsoluteFill>
     </PaperStage>
@@ -205,35 +232,48 @@ const TitleCard: React.FC<{ duration: number; lines: W[][]; size?: number }> = (
 const Deal: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
   const aIn = rise(frame, 0, 16);
-  const push = rise(frame, 52, 18);
-  const card = (title: string, shown: number, y: number) => (
+  const bIn = rise(frame, 8, 16);
+  const hand = interpolate(frame, [46, 78], [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const aFade = hand <= 0.4 ? 1 : 1 - (hand - 0.4) / 0.6;
+  const card = (title: string, opacity: number, x: number, y: number, depth: number, rot = 0) => (
     <div
       style={{
         position: 'absolute',
-        left: 160,
-        right: 160,
-        top: 250,
-        bottom: 250,
+        left: 200 + x,
+        top: y,
+        width: 1520,
+        height: 300,
         background: CARD,
-        borderRadius: 36,
-        boxShadow: '0 28px 70px rgba(19,17,15,0.14)',
+        borderRadius: 32,
+        boxShadow: `0 ${16 + depth * 20}px ${36 + depth * 24}px rgba(19,17,15,${0.1 + depth * 0.08})`,
         display: 'flex',
         alignItems: 'center',
-        padding: '0 80px',
-        opacity: shown,
-        transform: `translateY(${y}px)`,
+        padding: '0 56px',
+        opacity,
+        transform: `rotate(${rot}deg)`,
       }}
     >
-      <div style={{ width: 28, alignSelf: 'stretch', background: AMBER, borderRadius: 8, marginRight: 48 }} />
-      <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 92, color: INK, lineHeight: 1.08 }}>
-        {title}
-      </div>
+      <div style={{ width: 20, alignSelf: 'stretch', background: AMBER, borderRadius: 8, margin: '36px 0', marginRight: 36 }} />
+      <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 76, color: INK, lineHeight: 1.08 }}>{title}</div>
     </div>
   );
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
-      {card('Self-healing CI triage router', aIn, (1 - aIn) * 220 - push * 960)}
-      {card('Sensor drift early-warning', push, (1 - push) * 780)}
+      {card(
+        'Sensor drift early-warning',
+        bIn,
+        (1 - bIn) * 80,
+        560 - hand * 380,
+        hand,
+      )}
+      {card(
+        'Self-healing CI triage router',
+        aIn * aFade,
+        (1 - aIn) * 240 - hand * 520,
+        160 - hand * 160,
+        1 - hand,
+        -hand * 8,
+      )}
     </PaperStage>
   );
 };
@@ -241,49 +281,56 @@ const Deal: React.FC<{ duration: number }> = ({ duration }) => {
 const Search: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
   const query = 'nano-lab';
-  const typed = Math.max(0, Math.min(query.length, Math.floor((frame - 8) / 3)));
+  const typed = Math.max(0, Math.min(query.length, Math.floor((frame - 10) / 3)));
   const caretOn = Math.floor(frame / 8) % 2 === 0;
-  const result = rise(frame, 40, 16);
+  const filter = rise(frame, 42, 18);
+  const row = (title: string, y: number, opacity: number, x: number, selected: number) => (
+    <div
+      style={{
+        position: 'absolute',
+        left: 140 + x,
+        top: y,
+        width: 1640,
+        height: 210,
+        background: CARD,
+        borderRadius: 28,
+        boxShadow: selected > 0.5 ? `0 0 0 14px ${AMBER}` : '0 16px 40px rgba(19,17,15,0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 48px',
+        opacity,
+      }}
+    >
+      <div style={{ width: 18, height: 92, background: AMBER, borderRadius: 8, marginRight: 32, opacity: 0.35 + selected * 0.65 }} />
+      <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: INK, lineHeight: 1.08 }}>{title}</div>
+    </div>
+  );
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
-      <AbsoluteFill style={{ padding: '180px 140px 0' }}>
-        <div
-          style={{
-            height: 168,
-            borderRadius: 84,
-            background: CARD,
-            boxShadow: '0 18px 48px rgba(19,17,15,0.12)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 56px',
-            fontFamily: SERIF,
-            fontWeight: 600,
-            fontSize: 80,
-            color: INK,
-          }}
-        >
-          <span>{query.slice(0, typed)}</span>
-          <span style={{ width: 4, height: 72, marginLeft: 6, background: AMBER, opacity: caretOn ? 1 : 0 }} />
-        </div>
-        <div
-          style={{
-            marginTop: 48,
-            background: CARD,
-            borderRadius: 32,
-            boxShadow: '0 22px 56px rgba(19,17,15,0.12)',
-            padding: '48px 56px',
-            display: 'flex',
-            alignItems: 'center',
-            opacity: result,
-            transform: `translateY(${(1 - result) * 48}px)`,
-          }}
-        >
-          <div style={{ width: 22, alignSelf: 'stretch', background: AMBER, borderRadius: 8, marginRight: 36 }} />
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 76, color: INK, lineHeight: 1.1 }}>
-            nano-lab: automated research loop
-          </div>
-        </div>
-      </AbsoluteFill>
+      <div
+        style={{
+          position: 'absolute',
+          left: 140,
+          top: 120,
+          width: 1640,
+          height: 150,
+          borderRadius: 75,
+          background: CARD,
+          boxShadow: '0 16px 40px rgba(19,17,15,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 52px',
+          fontFamily: SERIF,
+          fontWeight: 600,
+          fontSize: 72,
+          color: INK,
+        }}
+      >
+        <span>{query.slice(0, typed)}</span>
+        <span style={{ width: 5, height: 64, marginLeft: 8, background: AMBER, opacity: caretOn ? 1 : 0 }} />
+      </div>
+      {row('nano-lab: automated research loop', 340 - filter * 0, 1, 0, filter)}
+      {row('Long-horizon coding arena', 580, 1 - filter, filter * 520, 0)}
     </PaperStage>
   );
 };
@@ -343,65 +390,82 @@ const Radar: React.FC<{ duration: number }> = ({ duration }) => {
     { n: '01', t: 'Drift-Aware Attention' },
     { n: '02', t: 'Knowing When to Ask' },
   ];
+  const land = [rise(frame, 4, 16), rise(frame, 28, 18)];
+  const press = interpolate(frame, [42, 48, 58], [0, 26, 0], clamp);
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
-      <AbsoluteFill style={{ justifyContent: 'center', padding: '0 140px' }}>
-        {rows.map((row, i) => {
-          const t = rise(frame, 6 + i * 16, 16);
-          return (
-            <div
-              key={row.n}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 36,
-                padding: '36px 8px',
-                borderTop: i === 0 ? '8px solid rgba(19,17,15,0.18)' : 'none',
-                borderBottom: '8px solid rgba(19,17,15,0.18)',
-                opacity: t,
-                transform: `translateY(${(1 - t) * -56}px)`,
-              }}
-            >
-              <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 72, color: AMBER, width: 120 }}>{row.n}</div>
-              <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 80, color: INK, lineHeight: 1.08 }}>{row.t}</div>
-            </div>
-          );
-        })}
-      </AbsoluteFill>
+      {rows.map((row, i) => {
+        const y = 250 + i * 280 + (1 - land[i]) * -220 + (i === 0 ? press : 0);
+        return (
+          <div
+            key={row.n}
+            style={{
+              position: 'absolute',
+              left: 140,
+              top: y,
+              width: 1640,
+              height: 240,
+              background: CARD,
+              borderRadius: 28,
+              boxShadow: '0 18px 44px rgba(19,17,15,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 48px',
+              gap: 32,
+              opacity: land[i],
+            }}
+          >
+            <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: AMBER, width: 110 }}>{row.n}</div>
+            <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 76, color: INK, lineHeight: 1.08 }}>{row.t}</div>
+          </div>
+        );
+      })}
     </PaperStage>
   );
 };
 
 const Weekly: React.FC<{ duration: number }> = ({ duration }) => {
   const frame = useCurrentFrame();
-  const head = rise(frame, 0, 14);
+  const open = rise(frame, 0, 14);
   const names = ['Lin', 'Marco', 'Yuki', 'Priya'];
+  const popEase = Easing.bezier(0.2, 1.25, 0.3, 1);
   return (
     <PaperStage opacity={fadeOut(frame, duration)}>
-      <AbsoluteFill style={{ padding: '120px 160px' }}>
-        <div style={{ opacity: head, transform: `translateY(${(1 - head) * 24}px)` }}>
-          <div style={{ fontFamily: SANS, fontSize: 64, letterSpacing: '0.08em', color: INK }}>WEEKLY BRIEF</div>
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 120, color: INK, lineHeight: 1.02, marginTop: 8 }}>
-            2026-W28
-          </div>
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: AMBER, marginTop: 8 }}>
-            Foundation Lab Weekly
-          </div>
-        </div>
-        <div style={{ marginTop: 48 }}>
+      <div
+        style={{
+          position: 'absolute',
+          left: 120,
+          top: 120,
+          width: 1680,
+          height: 840,
+          background: CARD,
+          borderRadius: 32,
+          boxShadow: '0 24px 60px rgba(19,17,15,0.12)',
+          display: 'flex',
+          overflow: 'hidden',
+          opacity: open,
+          transform: `translateY(${(1 - open) * 28}px)`,
+        }}
+      >
+        <div style={{ width: 520, borderRight: '8px solid rgba(19,17,15,0.08)', padding: '36px 32px' }}>
           {names.map((name, i) => {
-            const t = rise(frame, 28 + i * 10, 12);
+            const start = 20 + i * 10;
+            const t = interpolate(frame, [start, start + 12], [0, 1], { ...clamp, easing: popEase });
+            const bump = interpolate(frame, [start + 10, start + 14, start + 20], [1, 1.08, 1], clamp);
+            const shown = Math.min(1, Math.max(0, t));
             return (
               <div
                 key={name}
                 style={{
+                  height: 150,
+                  display: 'flex',
+                  alignItems: 'center',
                   fontFamily: SERIF,
                   fontWeight: 600,
-                  fontSize: 84,
+                  fontSize: 68,
                   color: INK,
-                  lineHeight: 1.15,
-                  opacity: t,
-                  transform: `translateX(${(1 - t) * 40}px)`,
+                  opacity: shown,
+                  transform: `translateX(${(1 - shown) * 48}px) scale(${(0.94 + 0.06 * shown) * bump})`,
                 }}
               >
                 {name}
@@ -409,70 +473,116 @@ const Weekly: React.FC<{ duration: number }> = ({ duration }) => {
             );
           })}
         </div>
-      </AbsoluteFill>
+        <div style={{ flex: 1, padding: '72px 64px' }}>
+          <div style={{ fontFamily: SANS, fontSize: 64, letterSpacing: '0.08em', color: INK }}>WEEKLY BRIEF</div>
+          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 108, color: INK, lineHeight: 1.02, marginTop: 16 }}>2026-W28</div>
+          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: AMBER, marginTop: 18 }}>Foundation Lab Weekly</div>
+        </div>
+      </div>
     </PaperStage>
   );
 };
 
 const Outro: React.FC = () => {
   const frame = useCurrentFrame();
-  const chips = [
-    { t: 'Research', x: 760, y: 70, delay: 0 },
-    { t: 'Radar', x: 150, y: 250, delay: 6 },
-    { t: 'Weekly', x: 1380, y: 250, delay: 10 },
+  const panel = rise(frame, 0, 12);
+  const slots = [
+    { t: 'Research', fromX: -280, fromY: 0, delay: 4 },
+    { t: 'Radar', fromX: 0, fromY: -180, delay: 10 },
+    { t: 'Weekly', fromX: 280, fromY: 0, delay: 16 },
   ];
-  const mark = rise(frame, 26, 14);
-  const tag = rise(frame, 42, 14);
+  const mark = rise(frame, 34, 14);
+  const tag = rise(frame, 48, 12);
+  const cardW = 500;
+  const gap = 28;
+  const rowW = cardW * 3 + gap * 2;
+  const left = (1920 - rowW) / 2;
   return (
     <PaperStage>
-      {chips.map((c) => {
-        const t = rise(frame, c.delay, 16);
+      <div
+        style={{
+          position: 'absolute',
+          left: 100,
+          top: 90,
+          width: 1720,
+          height: 900,
+          borderRadius: 36,
+          background: 'rgba(255,252,247,0.55)',
+          boxShadow: '0 0 0 8px rgba(19,17,15,0.06)',
+          opacity: panel,
+        }}
+      />
+      {slots.map((slot, i) => {
+        const t = rise(frame, slot.delay, 16);
+        const x = left + i * (cardW + gap) + (1 - t) * slot.fromX;
+        const y = 150 + (1 - t) * slot.fromY;
         return (
           <div
-            key={c.t}
+            key={slot.t}
             style={{
               position: 'absolute',
-              left: c.x,
-              top: c.y,
+              left: x,
+              top: y,
+              width: cardW,
+              height: 200,
               background: CARD,
-              borderRadius: 24,
+              borderRadius: 28,
               boxShadow: '0 16px 40px rgba(19,17,15,0.12)',
-              padding: '22px 36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               fontFamily: SERIF,
               fontWeight: 600,
-              fontSize: 76,
+              fontSize: 68,
               color: INK,
               opacity: t,
-              transform: `translateY(${(1 - t) * 36}px)`,
             }}
           >
-            {c.t}
+            {slot.t}
           </div>
         );
       })}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', paddingTop: 80 }}>
-        <div
-          style={{
-            fontFamily: SERIF,
-            fontWeight: 600,
-            fontSize: 116,
-            color: INK,
-            opacity: mark,
-            transform: `scale(${1.16 - 0.16 * mark})`,
-          }}
-        >
-          AI Foundation Lab
+      <div
+        style={{
+          position: 'absolute',
+          left,
+          top: 390,
+          width: rowW,
+          height: 10,
+          borderRadius: 5,
+          background: AMBER,
+          transform: `scaleX(${mark})`,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 440,
+          textAlign: 'center',
+          opacity: mark,
+          transform: `translateY(${(1 - mark) * 36}px) scale(${1.18 - 0.18 * mark})`,
+        }}
+      >
+        <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 104, color: INK }}>AI Foundation Lab</div>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 600,
+          textAlign: 'center',
+          opacity: tag,
+          transform: `translateY(${(1 - tag) * 20}px)`,
+        }}
+      >
+        <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: INK, lineHeight: 1.15 }}>The whole team,</div>
+        <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 68, color: INK, lineHeight: 1.15 }}>
+          on the <span style={{ color: AMBER, fontStyle: 'italic' }}>same</span> page.
         </div>
-        <div style={{ width: 220, height: 12, borderRadius: 6, background: AMBER, marginTop: 22, opacity: mark }} />
-        <div style={{ marginTop: 28, textAlign: 'center', opacity: tag, transform: `translateY(${(1 - tag) * 16}px)` }}>
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 72, color: INK, lineHeight: 1.12 }}>
-            The whole team,
-          </div>
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 72, color: INK, lineHeight: 1.12 }}>
-            on the <span style={{ color: AMBER, fontStyle: 'italic' }}>same</span> page.
-          </div>
-        </div>
-      </AbsoluteFill>
+      </div>
     </PaperStage>
   );
 };
